@@ -31,9 +31,6 @@ impl<'a> PwdTest<'a> {
         let index_1: usize = v[0].parse().expect("could not parse to usize");
         let index_2: usize = v[1].parse().expect("could not parse to usize");
 
-        let index_1 = index_1 - 1;
-        let index_2 = index_2 - 1;
-
         PwdTest {
             pass,
             c,
@@ -43,9 +40,9 @@ impl<'a> PwdTest<'a> {
     }
 
     fn is_okay(&self) -> bool {
-        let char_indices = self.pass.as_bytes();
-        if (char_indices[self.index_1] == self.c as u8)
-            ^ (char_indices[self.index_2] == self.c as u8)
+        let mut pass_chars = self.pass.chars();
+        if (pass_chars.nth(self.index_1 - 1) == Some(self.c))
+            ^ (pass_chars.nth(self.index_2 - self.index_1 - 1) == Some(self.c))
         {
             return true;
         }
