@@ -10,24 +10,20 @@ fn main() {
     let mut total = 0;
 
     for group in groups {
-        let group = group.lines().map(|s| s.trim());
-        let mut leader_said_yes: HashSet<char> = HashSet::new();
-        let mut member_said_yes: HashSet<char> = HashSet::new();
-        let mut all_members: HashSet<_>;
-        if let Some(leader) = group.next() {
-            for c in leader.chars() {
-                leader_said_yes.insert(c);
-            }
-        };
-        while let Some(member) = group.next() {
-            for c in member.chars() {
-                member_said_yes.insert(c);
-            }
+        let mut group = group.lines().map(|s| s.trim());
+        let mut all_members_yes: HashSet<char> = HashSet::new();
 
-            let all_members: HashSet<char> = all_members.intersection(&member_said_yes).collect();
+        if let Some(party_member) = group.next() {
+            for c in party_member.chars() {
+                all_members_yes.insert(c);
+            }
         }
 
-        total += leader_said_yes.len();
+        while let Some(party_member) = group.next() {
+            all_members_yes.retain(|&c| party_member.contains(c));
+        }
+
+        total += all_members_yes.len();
     }
 
     println!("The answer is: {}\n", total);
