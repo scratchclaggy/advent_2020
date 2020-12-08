@@ -29,14 +29,6 @@ fn main() {
         }
     }
 
-    for (contained, containers) in rules.iter() {
-        print!("{}: ", contained);
-        for container in containers.iter() {
-            print!("\'{}\' ", container);
-        }
-        println!();
-    }
-
     let possibilities: &mut HashSet<&str> = &mut HashSet::new();
 
     count_bags("shiny gold", possibilities, &rules);
