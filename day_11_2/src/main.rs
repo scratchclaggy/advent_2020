@@ -46,7 +46,7 @@ fn new_seating_vec(current_seating: &Vec<Seat>, width: usize) -> Vec<Seat> {
                 }
             }
             Seat::Occupied => {
-                if count_adjacent(i, &current_seating, width) >= 4 {
+                if count_adjacent(i, &current_seating, width) >= 5 {
                     new_seating.push(Seat::Vacant);
                 } else {
                     new_seating.push(Seat::Occupied);
@@ -64,22 +64,27 @@ fn count_adjacent(seat: usize, seat_arrangement: &Vec<Seat>, width: usize) -> u3
     let x_origin = seat % width;
     let y_origin = seat / width;
 
-    for x_adjacent in -1..2 {
-        let x_adjacent = x_origin as i32 + x_adjacent;
-        if x_adjacent >= 0 && x_adjacent < width as i32 {
-            for y_adjacent in -1..2 {
-                let y_adjacent = y_origin as i32 + y_adjacent;
-                if y_adjacent >= 0 {
-                    let adjacent_seat = y_adjacent as usize * width + x_adjacent as usize;
-                    if adjacent_seat != seat && adjacent_seat < seat_arrangement.len() {
-                        if seat_arrangement[adjacent_seat] == Seat::Occupied {
-                            occupied_seats += 1;
-                        }
-                    }
-                }
-            }
-        }
-    }
+    // Check North
+    let x = x_origin;
+    let y = y_origin;
+    while let Some(mut y) = y.checked_sub(1) {}
+
+    // for x_adjacent in -1..2 {
+    //     let x_adjacent = x_origin as i32 + x_adjacent;
+    //     if x_adjacent >= 0 && x_adjacent < width as i32 {
+    //         for y_adjacent in -1..2 {
+    //             let y_adjacent = y_origin as i32 + y_adjacent;
+    //             if y_adjacent >= 0 {
+    //                 let adjacent_seat = y_adjacent as usize * width + x_adjacent as usize;
+    //                 if adjacent_seat != seat && adjacent_seat < seat_arrangement.len() {
+    //                     if seat_arrangement[adjacent_seat] == Seat::Occupied {
+    //                         occupied_seats += 1;
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
 
     occupied_seats
 }
