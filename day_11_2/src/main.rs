@@ -22,6 +22,7 @@ fn main() {
     }
 
     while current_seating != past_seating {
+        // print_seating(&current_seating, width);
         past_seating = current_seating.to_vec();
         current_seating = new_seating_vec(&current_seating, width);
     }
@@ -61,32 +62,162 @@ fn new_seating_vec(current_seating: &Vec<Seat>, width: usize) -> Vec<Seat> {
 
 fn count_adjacent(seat: usize, seat_arrangement: &Vec<Seat>, width: usize) -> u32 {
     let mut occupied_seats = 0;
-    let x_origin = seat % width;
-    let y_origin = seat / width;
 
     // Check North
-    let x = x_origin;
-    let y = y_origin;
-    while let Some(mut y) = y.checked_sub(1) {}
+    let mut adjacent_seat = seat;
+    while let Some(_) = adjacent_seat.checked_sub(width) {
+        adjacent_seat -= width;
 
-    // for x_adjacent in -1..2 {
-    //     let x_adjacent = x_origin as i32 + x_adjacent;
-    //     if x_adjacent >= 0 && x_adjacent < width as i32 {
-    //         for y_adjacent in -1..2 {
-    //             let y_adjacent = y_origin as i32 + y_adjacent;
-    //             if y_adjacent >= 0 {
-    //                 let adjacent_seat = y_adjacent as usize * width + x_adjacent as usize;
-    //                 if adjacent_seat != seat && adjacent_seat < seat_arrangement.len() {
-    //                     if seat_arrangement[adjacent_seat] == Seat::Occupied {
-    //                         occupied_seats += 1;
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
+        match seat_arrangement[adjacent_seat] {
+            Seat::Occupied => {
+                occupied_seats += 1;
+                break;
+            }
+            Seat::Vacant => break,
+            Seat::Floor => {}
+        }
+    }
+
+    // Check South
+    adjacent_seat = seat + width;
+    while adjacent_seat < seat_arrangement.len() {
+        match seat_arrangement[adjacent_seat] {
+            Seat::Occupied => {
+                occupied_seats += 1;
+                break;
+            }
+            Seat::Vacant => break,
+            Seat::Floor => {}
+        }
+
+        adjacent_seat += width;
+    }
+
+    // Check East
+    adjacent_seat = seat + 1;
+    while adjacent_seat % width != 0 {
+        match seat_arrangement[adjacent_seat] {
+            Seat::Occupied => {
+                occupied_seats += 1;
+                break;
+            }
+            Seat::Vacant => break,
+            Seat::Floor => {}
+        }
+
+        adjacent_seat += 1;
+    }
+
+    // Check West
+    adjacent_seat = seat;
+    while let Some(_) = adjacent_seat.checked_sub(1) {
+        adjacent_seat -= 1;
+
+        if adjacent_seat % width == width - 1 {
+            break;
+        }
+
+        match seat_arrangement[adjacent_seat] {
+            Seat::Occupied => {
+                occupied_seats += 1;
+                break;
+            }
+            Seat::Vacant => break,
+            Seat::Floor => {}
+        }
+    }
+
+    // Check NE
+    adjacent_seat = seat;
+    while let Some(_) = adjacent_seat.checked_sub(width - 1) {
+        adjacent_seat -= width - 1;
+
+        if adjacent_seat % width == 0 {
+            break;
+        }
+
+        match seat_arrangement[adjacent_seat] {
+            Seat::Occupied => {
+                occupied_seats += 1;
+                break;
+            }
+            Seat::Vacant => break,
+            Seat::Floor => {}
+        }
+    }
+
+    // Check NW
+    adjacent_seat = seat;
+    while let Some(_) = adjacent_seat.checked_sub(width + 1) {
+        adjacent_seat -= width + 1;
+        if adjacent_seat % width == width - 1 {
+            break;
+        }
+
+        match seat_arrangement[adjacent_seat] {
+            Seat::Occupied => {
+                occupied_seats += 1;
+                break;
+            }
+            Seat::Vacant => break,
+            Seat::Floor => {}
+        }
+    }
+
+    // Check SE
+    adjacent_seat = seat + width + 1;
+    while adjacent_seat < seat_arrangement.len() {
+        if adjacent_seat % width == 0 {
+            break;
+        }
+        match seat_arrangement[adjacent_seat] {
+            Seat::Occupied => {
+                occupied_seats += 1;
+                break;
+            }
+            Seat::Vacant => break,
+            Seat::Floor => {}
+        }
+
+        adjacent_seat += width + 1;
+    }
+
+    // Check SW
+    adjacent_seat = seat + width - 1;
+    while adjacent_seat < seat_arrangement.len() {
+        if adjacent_seat % width == width - 1 {
+            break;
+        }
+        match seat_arrangement[adjacent_seat] {
+            Seat::Occupied => {
+                occupied_seats += 1;
+                break;
+            }
+            Seat::Vacant => break,
+            Seat::Floor => {}
+        }
+
+        adjacent_seat += width - 1;
+    }
 
     occupied_seats
+}
+
+fn print_seating(seating: &Vec<Seat>, width: usize) {
+    for i in 0..seating.len() {
+        let seat = match seating[i] {
+            Seat::Occupied => '#',
+            Seat::Vacant => 'L',
+            Seat::Floor => '.',
+        };
+        print!("{}", seat);
+
+        if i % width == width - 1 {
+            println!();
+        }
+    }
+
+    println!();
 }
 
 #[derive(PartialEq, Copy, Clone)]
