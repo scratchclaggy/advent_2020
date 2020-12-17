@@ -63,7 +63,7 @@ impl Boat {
         self.position.1 += self.waypoint.1 * distance as i32; // y
     }
 
-    fn translate(&mut self, bearing: (i32, i32), distance: u32) {
+   fn translate(&mut self, bearing: (i32, i32), distance: u32) {
         self.waypoint.0 += bearing.0 * distance as i32; // x
         self.waypoint.1 += bearing.1 * distance as i32; // y
     }
