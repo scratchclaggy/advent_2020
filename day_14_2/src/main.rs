@@ -4,82 +4,124 @@ use std::fs;
 const FILENAME: &str = "input.txt";
 
 fn main() {
-    let input = fs::read_to_string(FILENAME).expect("FILE ERROR");
-    let program: Vec<Task> = input
-        .lines()
-        .map(|line| {
-            let mut input_string = line.split(" = ");
-            let task_type = input_string.next().unwrap();
-            let new_task: Task = match task_type {
-                "mask" => Task::BitMask(Mask::new(input_string.next().unwrap())),
-                _ => Task::Allocation(
-                    task_type
-                        .split(|c| c == '[' || c == ']')
-                        .skip(1)
-                        .next()
-                        .unwrap()
-                        .parse::<u64>()
-                        .unwrap(),
-                    input_string.next().unwrap().trim().parse::<u64>().unwrap(),
-                ),
-            };
-            new_task
-        })
-        .collect();
+    // let input = fs::read_to_string(FILENAME).expect("FILE ERROR");
+    // let program: Vec<Task> = input
+    //     .lines()
+    //     .map(|line| {
+    //         let mut input_string = line.split(" = ");
+    //         let task_type = input_string.next().unwrap();
+    //         let new_task: Task = match task_type {
+    //             "mask" => Task::BitMask(Mask::new(input_string.next().unwrap())),
+    //             _ => Task::Allocation(
+    //                 task_type
+    //                     .split(|c| c == '[' || c == ']')
+    //                     .skip(1)
+    //                     .next()
+    //                     .unwrap()
+    //                     .parse::<u64>()
+    //                     .unwrap(),
+    //                 input_string.next().unwrap().trim().parse::<u64>().unwrap(),
+    //             ),
+    //         };
+    //         new_task
+    //     })
+    //     .collect();
 
-    let mut current_mask: Mask = Mask::new("0");
-    let mut memory: HashMap<u64, u64> = HashMap::new();
-    for instruction in program {
-        match instruction {
-            Task::Allocation(address, value) => {
-                memory.insert(address, current_mask.apply_mask(value));
-                //println!("{}: {}", address, current_mask.apply_mask(value));
-            }
-            Task::BitMask(next_mask) => current_mask = next_mask,
-        }
-    }
+    // let mut current_mask: Mask = Mask::new("0");
+    // let mut memory: HashMap<u64, u64> = HashMap::new();
+    // for instruction in program {
+    //     match instruction {
+    //         Task::Allocation(address, value) => {
+    //             // memory.insert(address, current_mask.apply_mask(value));
+    //             //println!("{}: {}", address, current_mask.apply_mask(value));
+    //         }
+    //         Task::BitMask(next_mask) => current_mask = next_mask,
+    //     }
+    // }
 
-    println!("{}", memory.values().sum::<u64>());
+    // println!("{}", memory.values().sum::<u64>());
 }
 
-struct Mask<'a> {
-    mask_string: &'a str,
+struct Mask {
+    bit_mask: u64,
     x_index: Vec<usize>,
     max: u64,
 }
 
-impl<'a> Mask<'a> {
-    fn new(mask_string: &'a str) -> Mask {
-        let x_index: Vec<usize> = Vec::new();
-        for (i, c) in mask_string.chars().enumerate() {
+impl Mask {
+    fn new(input_string: &str) -> Mask {
+        let mut x_index: Vec<usize> = Vec::new();
+        let mut string_no_x: Vec<char> = Vec::new();
+        for (i, c) in input_string.chars().enumerate() {
             if c == 'X' {
+                string_no_x.push('0');
                 x_index.push(i);
+            } else {
+                string_no_x.push(c);
             }
         }
-        let max_string = String::new();
-        for i in 0..x_index.len() {
-            max_string.push('1');
-        }
-        let max = max_string.parse().unwrap();
+
+        let bit_mask = string_no_x.into_iter().collect::<String>().parse().unwrap();
+        let max = vec!["1"; x_index.len()]
+            .into_iter()
+            .collect::<String>()
+            .parse()
+            .unwrap();
 
         Mask {
-            mask_string,
+            bit_mask,
             x_index,
             max,
         }
     }
 
-    fn decode_address(&self, address: u64) -> Vec<u64> {
-        let addresses: Vec<u64> = vec![];
-        for bit in 0..self.max {
-            for i in self.x_index {}
+    fn decode_address(&self, mut input_address: u64) -> Vec<u64> {
+        // Apply mask to input_address
+        input_address = input_address | self.bit_mask;
+
+        // Create vector to store adress_set
+        let mut address_set: Vec<u64> = vec![];
+
+        // From 0 - 2(n)-1 go through each permutation
+        for permutation in 0..self.max {
+            let mut current_permutation = 0;
+            // For each bit position in the permutation
+            for bit_position in 0..self.x_index.len() {
+                // Mask the current position's bit
+                let mut floating_bit = permutation & (1 << bit_position);
+
+                if floating_bit == 1 {
+                    // Shift bit to the necessary position
+                    floating_bit = floating_bit << self.x_index[bit_position];
+                    current_permutation = input_address | floating_bit;
+                } else {
+                    floating_bit = floating_bit << self.x_index[bit_position];
+                    current_permutation = input_address & (!floating_bit);
+                }
+            }
+
+            address_set.push(current_permutation);
         }
 
-        addresses
+        // Return the set
+        address_set
     }
 }
 
 enum Task {
     BitMask(Mask),
     Allocation(u64, u64),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mask_test() {
+        let mask = Mask::new("000000000000000000000000000000X1001X");
+        let address = 42;
+        let address_set = mask.decode_address(address);
+        assert_eq!(address_set, [26, 27, 58, 59]);
+    }
 }
