@@ -1,7 +1,8 @@
-use std::collections::HashMap;
-use std::fs;
+use num::pow;
+// use std::collections::HashMap;
+// use std::fs;
 
-const FILENAME: &str = "input.txt";
+// const FILENAME: &str = "input.txt";
 
 fn main() {
     // let input = fs::read_to_string(FILENAME).expect("FILE ERROR");
@@ -44,68 +45,56 @@ fn main() {
 
 struct Mask {
     bit_mask: u64,
-    x_index: Vec<usize>,
-    max: u64,
+    floating_mask: u64,
+    floating_indexes: Vec<usize>,
+    floating_max: u64,
 }
 
 impl Mask {
     fn new(input_string: &str) -> Mask {
-        let mut x_index: Vec<usize> = Vec::new();
-        let mut string_no_x: Vec<char> = Vec::new();
-        for (i, c) in input_string.chars().enumerate() {
-            if c == 'X' {
-                string_no_x.push('0');
-                x_index.push(i);
-            } else {
-                string_no_x.push(c);
-            }
-        }
-
-        let bit_mask = string_no_x.into_iter().collect::<String>().parse().unwrap();
-        let max = vec!["1"; x_index.len()]
-            .into_iter()
-            .collect::<String>()
-            .parse()
-            .unwrap();
+        let bit_mask = input_string
+            .chars()
+            .fold(0, |acc, b| if b == '1' { acc << 1 | 1 } else { acc << 1 });
+        let floating_mask =
+            input_string.chars().fold(
+                u64::MAX,
+                |acc, b| if b == 'X' { acc << 1 } else { acc << 1 | 1 },
+            );
+        let floating_indexes: Vec<usize> = input_string
+            .chars()
+            .enumerate()
+            .filter_map(|(i, b)| if b == 'X' { Some(i) } else { None })
+            .collect();
+        let floating_max = pow(2, floating_indexes.len());
 
         Mask {
             bit_mask,
-            x_index,
-            max,
+            floating_mask,
+            floating_indexes,
+            floating_max,
         }
     }
 
     fn decode_address(&self, mut input_address: u64) -> Vec<u64> {
-        // Apply mask to input_address
-        input_address = input_address | self.bit_mask;
-
-        // Create vector to store adress_set
         let mut address_set: Vec<u64> = vec![];
-
-        // From 0 - 2(n)-1 go through each permutation
-        for permutation in 0..self.max {
-            let mut current_permutation = 0;
-            // For each bit position in the permutation
-            for bit_position in 0..self.x_index.len() {
-                // Mask the current position's bit
-                let mut floating_bit = permutation & (1 << bit_position);
-
-                if floating_bit == 1 {
-                    // Shift bit to the necessary position
-                    floating_bit = floating_bit << self.x_index[bit_position];
-                    current_permutation = input_address | floating_bit;
-                } else {
-                    floating_bit = floating_bit << self.x_index[bit_position];
-                    current_permutation = input_address & (!floating_bit);
-                }
-            }
-
-            address_set.push(current_permutation);
-        }
-
-        // Return the set
+        let masked_input = input_address | self.bit_mask & self.floating_mask;
         address_set
     }
+}
+
+fn bin_to_vec(mut bin: u64) -> Vec<u8> {
+    let mut vec: Vec<u8> = vec![];
+    while bin > 0 {
+        vec.push(bin as u8 & 1);
+        bin = bin >> 1;
+    }
+    vec.reverse();
+
+    vec
+}
+
+fn vec_to_bin(vec: Vec<u8>) -> u64 {
+    vec.into_iter().fold(0, |acc, b| acc << 1 | b as u64)
 }
 
 enum Task {
@@ -122,6 +111,12 @@ mod tests {
         let mask = Mask::new("000000000000000000000000000000X1001X");
         let address = 42;
         let address_set = mask.decode_address(address);
+        assert_eq!(bin_to_vec(0b10101010), [1, 0, 1, 0, 1, 0, 1, 0]);
+        assert_eq!(vec_to_bin([1, 0, 1, 0, 1, 0, 1, 0].to_vec()), 0b10101010);
+        assert_eq!(mask.bit_mask, 0b10010);
+        assert_eq!(mask.floating_mask, !0b100001);
+        assert_eq!(mask.floating_indexes, [30, 35]);
+        assert_eq!(mask.floating_max, 4);
         assert_eq!(address_set, [26, 27, 58, 59]);
     }
 }
