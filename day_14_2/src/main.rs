@@ -17,7 +17,7 @@ fn main() {
                     task_type
                         .split(|c| c == '[' || c == ']')
                         .skip(1)
-                        .next()
+                     .next()
                         .unwrap()
                         .parse::<u64>()
                         .unwrap(),
