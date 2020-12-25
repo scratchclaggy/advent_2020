@@ -81,10 +81,14 @@ fn main() {
             }
         }
     }
-
+    let mut answer: u64 = 1;
     for rule in rulebook.iter() {
-        println!("{}: {}",)
+        if rule.ticket_field.starts_with("departure") {
+            answer *= my_ticket[rule.field_num.unwrap()] as u64;
+        }
     }
+
+    println!("Answer: {}", answer);
 }
 
 struct Rule<'a> {
