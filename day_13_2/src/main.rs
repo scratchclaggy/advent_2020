@@ -4,7 +4,7 @@ const FILENAME: &str = "input.txt";
 
 fn main() {
     let input_file = fs::read_to_string(FILENAME).expect("FILE ERROR");
-    let mut bus_routes: Vec<BusRoute> = input_file
+    let mut bus_routes: Vec<(u64, u64)> = input_file
         .lines()
         .skip(1)
         .next()
@@ -13,21 +13,20 @@ fn main() {
         .enumerate()
         .filter_map(|(off, br)| {
             if br != "x" {
-                Some(BusRoute::new(br.parse().unwrap(), off as u64))
+                Some((br.parse::<u64>().unwrap(), off as u64))
             } else {
                 None
             }
         })
         .collect();
 
-    let modulo = bus_routes.iter().fold(1, |acc, br| acc * br.route_num);
-    let global_offset = bus_routes[bus_routes.len() - 1].offset;
-    bus_routes.iter_mut().for_each(|br| {
-        br.set_moduli(modulo);
-        br.offset = global_offset - br.offset;
-    });
-    let ans =
-        bus_routes.iter().fold(0, |acc, br| acc + br.get_product()) % modulo - bus_routes[0].offset;
+    let big_modulo = bus_routes.iter().fold(1, |acc, br| acc * br.0);
+    let max_offset = bus_routes[bus_routes.len() - 1].1;
+    let bus_routes: Vec<BusRoute> = bus_routes
+        .iter_mut()
+        .map(|br| BusRoute::new(br.0, max_offset - br.1, big_modulo))
+        .collect();
+    let ans = bus_routes.iter().fold(0, |acc, br| acc + br.get_product()) % big_modulo - max_offset;
 
     println!("Answer: {}", ans);
 }
@@ -41,31 +40,28 @@ struct BusRoute {
 }
 
 impl BusRoute {
-    fn new(route_num: u64, offset: u64) -> BusRoute {
+    fn new(route_num: u64, offset: u64, big_modulo: u64) -> BusRoute {
+        let moduli = big_modulo / route_num;
+        let inverse = modular_inverse(moduli, route_num);
         BusRoute {
             route_num,
             offset,
-            moduli: 1,
-            inverse: 1,
+            moduli,
+            inverse,
         }
-    }
-
-    fn set_moduli(&mut self, modulo: u64) {
-        self.moduli = modulo / self.route_num;
-        self.set_inverse();
-    }
-
-    fn set_inverse(&mut self) {
-        let inverse = self.moduli % self.route_num;
-        let mut i = 1;
-        while i * inverse % self.route_num != 1 {
-            i += 1;
-        }
-
-        self.inverse = i;
     }
 
     fn get_product(&self) -> u64 {
         self.offset * self.moduli * self.inverse
     }
+}
+
+fn modular_inverse(num: u64, modulo: u64) -> u64 {
+    let simplified = num % modulo;
+    let mut inverse = 1;
+    while inverse * simplified % modulo != 1 {
+        inverse += 1;
+    }
+
+    inverse
 }
