@@ -20,59 +20,52 @@ fn main() {
         })
         .collect();
 
-    bus_routes.sort();
+    let modulo = bus_routes.iter().fold(1, |acc, br| acc * br.route_num);
+    let global_offset = bus_routes[bus_routes.len() - 1].offset;
+    bus_routes.iter_mut().for_each(|br| {
+        br.set_moduli(modulo);
+        br.offset = global_offset - br.offset;
+    });
+    let ans =
+        bus_routes.iter().fold(0, |acc, br| acc + br.get_product()) % modulo - bus_routes[0].offset;
 
-    let mut first_route = bus_routes[bus_routes.len() - 1];
-
-    // for route in bus_routes.iter() {
-    //     println!("{:03}: {}", route.route_num, route.arrival_time());
-    // }
-    'restart: loop {
-        for route in bus_routes.iter_mut().rev().skip(1) {
-            if first_route.arrival_time() != route.arrival_time() {
-                while first_route.arrival_time() != route.arrival_time() {
-                    // println!(
-                    //     "{:64} : {:64}",
-                    //     first_route.arrival_time(),
-                    //     route.arrival_time()
-                    // );
-                    if first_route.arrival_time() < route.arrival_time() {
-                        first_route.mult += 1;
-                    } else {
-                        route.mult = first_route.arrival_time() / route.route_num + route.route_num;
-                    }
-                }
-                continue 'restart;
-            }
-        }
-
-        break;
-    }
-
-    // for route in bus_routes.iter() {
-    //     println!("{:03}: {}", route.route_num, route.arrival_time());
-    // }
-
-    println!("Answer: {}", first_route.arrival_time());
+    println!("Answer: {}", ans);
 }
 
 #[derive(Debug, Eq, Ord, PartialEq, PartialOrd, Clone, Copy)]
 struct BusRoute {
     route_num: u64,
-    mult: u64,
     offset: u64,
+    moduli: u64,
+    inverse: u64,
 }
 
 impl BusRoute {
     fn new(route_num: u64, offset: u64) -> BusRoute {
         BusRoute {
             route_num,
-            mult: 5_000_000_000 / route_num,
             offset,
+            moduli: 1,
+            inverse: 1,
         }
     }
 
-    fn arrival_time(&self) -> u64 {
-        self.route_num * self.mult - self.offset
+    fn set_moduli(&mut self, modulo: u64) {
+        self.moduli = modulo / self.route_num;
+        self.set_inverse();
+    }
+
+    fn set_inverse(&mut self) {
+        let inverse = self.moduli % self.route_num;
+        let mut i = 1;
+        while i * inverse % self.route_num != 1 {
+            i += 1;
+        }
+
+        self.inverse = i;
+    }
+
+    fn get_product(&self) -> u64 {
+        self.offset * self.moduli * self.inverse
     }
 }
