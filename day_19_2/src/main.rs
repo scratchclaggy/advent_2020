@@ -60,6 +60,17 @@ fn main() {
         message_lengths.insert(message.len());
     }
 
+    // for length in message_lengths.iter() {
+    //     println!(
+    //         "{}: {}",
+    //         length,
+    //         unverified_messages
+    //             .iter()
+    //             .filter(|msg| msg.len() == *length)
+    //             .count()
+    //     );
+    // }
+
     // debug_print(valid_messages.iter());
     // debug_print(unverified_messages.iter());
 
@@ -84,6 +95,9 @@ fn expand_ruleset(
 ) {
     match ruleset.get(&rule).unwrap() {
         RuleMessage::Rule(current_rule) => {
+            if messages.iter().filter(|msg| msg.len() > 96).count() > 0 {
+                return;
+            }
             // Recursive component
             // Expand the messages accoring to the current rule
             // If there is an alternative rule, give a copy and append after expansion
