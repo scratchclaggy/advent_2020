@@ -1,10 +1,10 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 mod tile;
 mod transformation;
 
-use crate::tile::{Tile, TILE_HEIGHT, TILE_WIDTH};
+use crate::tile::Tile;
 
 const FILENAME: &str = "input.txt";
 
@@ -12,19 +12,20 @@ fn main() {
     let file = File::open(FILENAME)
         .map(BufReader::new)
         .expect("File I/O Error");
-    let mut tiles = tile::extract_tiles(file.lines().map(|s| s.unwrap()));
+    let mut tiles_no_matches = tile::extract_tiles(file.lines().map(|s| s.unwrap()));
 
     let mut tile_map: HashMap<usize, Tile> = HashMap::new();
 
-    while let Some((id, mut tile)) = tiles.pop() {
-        for (other_id, other_tile) in tiles.iter_mut() {
+    // Find the other matching tile for each edge of each tile
+    while let Some((id, mut tile)) = tiles_no_matches.pop() {
+        for (other_id, other_tile) in tiles_no_matches.iter_mut() {
             // For each side
             for i in 0..8 {
                 // For each side in other tile
                 for j in 0..8 {
-                    if tile.sides.sides[i] == other_tile.sides.sides[j] {
-                        tile.sides.matching[i].insert(*other_id);
-                        other_tile.sides.matching[j].insert(id);
+                    if tile.sides[i] == other_tile.sides[j] {
+                        tile.matching_tiles[i] = Some(*other_id);
+                        other_tile.matching_tiles[j] = Some(id);
                     }
                 }
             }
@@ -34,29 +35,32 @@ fn main() {
 
     let ans = tile_map
         .iter()
-        .filter(|(id, tile)| {
-            tile.sides
-                .matching
+        .filter(|(_, tile)| {
+            tile.matching_tiles
                 .iter()
-                .filter(|side| side.is_empty())
+                .filter(|side| match side {
+                    Some(_) => true,
+                    None => false,
+                })
                 .count()
                 == 4
         })
         .map(|(id, _)| id)
         .product::<usize>();
 
+    // println!("{}", ans);
+    // for (id, tile) in tile_map.iter() {
+    //     println!("{}: ", id);
+    //     for side in tile.sides.matching.iter() {
+    //         print!(" ");
+    //         for matched_side in side.iter() {
+    //             print!(" {}", matched_side);
+    //         }
+    //         println!();
+    //     }
+    // }
+
     println!("{}", ans);
-    for (id, tile) in tile_map.iter() {
-        println!("{}: ", id);
-        for side in tile.sides.matching.iter() {
-            print!(" ");
-            for matched_side in side.iter() {
-                print!(" {}", matched_side);
-            }
-            println!();
-            assert!(side.len() == 0 || side.len() == 1);
-        }
-    }
 }
 
 #[cfg(test)]
@@ -177,19 +181,19 @@ mod tests {
     fn test() {
         use super::*;
 
-        let mut tiles = tile::extract_tiles(INPUT);
+        let mut tiles_no_matches = tile::extract_tiles(INPUT);
 
         let mut tile_map: HashMap<usize, Tile> = HashMap::new();
 
-        while let Some((id, mut tile)) = tiles.pop() {
-            for (other_id, other_tile) in tiles.iter_mut() {
+        while let Some((id, mut tile)) = tiles_no_matches.pop() {
+            for (other_id, other_tile) in tiles_no_matches.iter_mut() {
                 // For each side
                 for i in 0..8 {
                     // For each side in other tile
                     for j in 0..8 {
-                        if tile.sides.sides[i] == other_tile.sides.sides[j] {
-                            tile.sides.matching[i].insert(*other_id);
-                            other_tile.sides.matching[j].insert(id);
+                        if tile.sides[i] == other_tile.sides[j] {
+                            tile.matching_tiles[i] = Some(*other_id);
+                            other_tile.matching_tiles[j] = Some(id);
                         }
                     }
                 }
@@ -198,13 +202,12 @@ mod tests {
         }
 
         for (id, tile) in tile_map.iter() {
-            println!("{}: ", id);
-            for side in tile.sides.matching.iter() {
-                print!(" ");
-                for matched_side in side.iter() {
-                    print!(" {}", matched_side);
+            print!("{}: ", id);
+            for side in tile.matching_tiles.iter() {
+                match side {
+                    Some(matching_side) => println!("{}", matching_side),
+                    None => println!(),
                 }
-                println!();
             }
         }
         panic!();
