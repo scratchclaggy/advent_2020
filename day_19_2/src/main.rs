@@ -116,10 +116,12 @@ fn check_message(
             }
             if let Some(ref_list) = list_of_rule_lists.next() {
                 let mut msg_copy = msg.clone();
+                if rule == 8 {
+                    search_depth += 5;
+                } else if rule == 11 {
+                    search_depth += 10;
+                }
                 for rule_ref in ref_list {
-                    if *rule_ref == 8 || *rule_ref == 11 {
-                        search_depth += 5
-                    }
                     okay = check_message(&mut msg_copy, *rule_ref, &ruleset, search_depth);
                     if !okay {
                         break;
