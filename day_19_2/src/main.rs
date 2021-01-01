@@ -1,12 +1,12 @@
 use std::collections::HashMap;
-use std::collections::HashSet;
 use std::fs;
 
 const FILENAME: &str = "input.txt";
+
 fn main() {
     let mut ruleset: HashMap<usize, RuleMessage> = HashMap::new();
-    let mut valid_messages: Vec<Vec<bool>> = vec![vec![]];
-    let mut unverified_messages: Vec<Vec<bool>> = vec![vec![]];
+    let mut unverified_messages: Vec<(Vec<bool>, usize)> = vec![];
+
     let input_file = fs::read_to_string(FILENAME).expect("File I/O error");
     let mut input_file = input_file.lines();
 
@@ -17,27 +17,27 @@ fn main() {
         }
 
         let mut line = line.split(": ");
-        let rule_index: usize = line.next().unwrap().parse().unwrap();
+        let rule_name: usize = line.next().unwrap().parse().unwrap();
         let rule_contents = line.next().unwrap();
         if rule_contents.starts_with("\"") {
-            // Actual value
+            // Char
             if rule_contents == "\"a\"" {
-                ruleset.insert(rule_index, RuleMessage::Val(true));
+                ruleset.insert(rule_name, RuleMessage::Val(true));
             } else {
-                ruleset.insert(rule_index, RuleMessage::Val(false));
+                ruleset.insert(rule_name, RuleMessage::Val(false));
             }
         } else {
-            // Sub-rules
-            let mut rule_halves: Vec<Vec<usize>> = vec![vec![]];
+            // Reference
+            let mut xor_ref_list: Vec<Vec<usize>> = vec![];
             let mut rule_contents = rule_contents.split(" | ");
-            while let Some(rule_half) = rule_contents.next() {
-                let mut half: Vec<usize> = vec![];
-                for rule_reference in rule_half.split(" ") {
-                    half.push(rule_reference.parse().unwrap());
+            while let Some(ref_list) = rule_contents.next() {
+                let mut list_vec: Vec<usize> = vec![];
+                for rule_ref in ref_list.split(" ") {
+                    list_vec.push(rule_ref.parse().unwrap());
                 }
-                rule_halves.push(half);
+                xor_ref_list.push(list_vec);
             }
-            ruleset.insert(rule_index, RuleMessage::Rule(rule_halves));
+            ruleset.insert(rule_name, RuleMessage::Rule(xor_ref_list));
         }
     }
 
@@ -51,34 +51,31 @@ fn main() {
                 current_message.push(false);
             }
         }
-        unverified_messages.push(current_message);
+        let current_len = current_message.len();
+        unverified_messages.push((current_message, current_len));
     }
-
-    expand_ruleset(0, &ruleset, &mut valid_messages);
-    let mut message_lengths: HashSet<usize> = HashSet::new();
-    for message in unverified_messages.iter() {
-        message_lengths.insert(message.len());
-    }
-
-    // for length in message_lengths.iter() {
-    //     println!(
-    //         "{}: {}",
-    //         length,
-    //         unverified_messages
-    //             .iter()
-    //             .filter(|msg| msg.len() == *length)
-    //             .count()
-    //     );
-    // }
-
-    // debug_print(valid_messages.iter());
-    // debug_print(unverified_messages.iter());
 
     println!(
         "Answer: {}",
         unverified_messages
-            .iter()
-            .filter(|msg| valid_messages.contains(*msg))
+            .iter_mut()
+            // .filter(|msg| msg.1 == 24)
+            .filter_map(|mut msg| {
+                for c in msg.0.iter() {
+                    if *c {
+                        print!("a");
+                    } else {
+                        print!("b");
+                    }
+                }
+                if check_message(&mut msg, 0, &ruleset, 15) {
+                    println!(": okay");
+                    Some(true)
+                } else {
+                    println!(": no good");
+                    None
+                }
+            })
             .count()
     );
 }
@@ -88,54 +85,70 @@ enum RuleMessage {
     Val(bool),
 }
 
-fn expand_ruleset(
+fn check_message(
+    msg: &mut (Vec<bool>, usize),
     rule: usize,
     ruleset: &HashMap<usize, RuleMessage>,
-    mut messages: &mut Vec<Vec<bool>>,
-) {
-    match ruleset.get(&rule).unwrap() {
-        RuleMessage::Rule(current_rule) => {
-            if messages.iter().filter(|msg| msg.len() > 96).count() > 0 {
-                return;
-            }
-            // Recursive component
-            // Expand the messages accoring to the current rule
-            // If there is an alternative rule, give a copy and append after expansion
-            let mut current_rule = current_rule.iter();
-            current_rule.next();
-            let mut messages_copy = messages.clone();
+    mut search_depth: usize,
+) -> bool {
+    if search_depth > msg.1 {
+        return false;
+    } else if msg.0.is_empty() {
+        return true;
+    }
 
-            if let Some(sub_rule) = current_rule.next() {
-                for recursive_rule in sub_rule {
-                    expand_ruleset(*recursive_rule, &ruleset, &mut messages);
+    match ruleset.get(&rule).unwrap() {
+        RuleMessage::Rule(list_of_rule_lists) => {
+            let mut list_of_rule_lists = list_of_rule_lists.iter();
+            let mut okay = false;
+            if let Some(ref_list) = list_of_rule_lists.next() {
+                let mut msg_copy = msg.clone();
+                for rule_ref in ref_list {
+                    okay = check_message(&mut msg_copy, *rule_ref, &ruleset, search_depth);
+                    if !okay {
+                        break;
+                    }
                 }
-                // println!("First expansion: ");
-                // debug_print(messages);
+                if okay {
+                    *msg = msg_copy.clone();
+                    return true;
+                }
             }
-            if let Some(sub_rule) = current_rule.next() {
-                for recursive_rule in sub_rule {
-                    expand_ruleset(*recursive_rule, &ruleset, &mut messages_copy);
+            if let Some(ref_list) = list_of_rule_lists.next() {
+                let mut msg_copy = msg.clone();
+                for rule_ref in ref_list {
+                    if *rule_ref == 8 || *rule_ref == 11 {
+                        search_depth += 5
+                    }
+                    okay = check_message(&mut msg_copy, *rule_ref, &ruleset, search_depth);
+                    if !okay {
+                        break;
+                    }
                 }
-                messages.append(&mut messages_copy);
-                // println!("Second expansion: ");
-                // debug_print(messages);
+                if okay {
+                    *msg = msg_copy.clone();
+                    return true;
+                }
             }
         }
         RuleMessage::Val(actual_value) => {
-            // Base case
-            for message in messages {
-                message.push(*actual_value);
+            if msg.0[0] == *actual_value {
+                msg.0.remove(0);
+                return true;
+            } else {
+                return false;
             }
         }
     }
+    false
 }
 
-fn debug_print<'a, I>(messages: I)
-where
-    I: Iterator<Item = &'a Vec<bool>>,
-{
-    for (i, message) in messages.into_iter().enumerate() {
-        let message: String = message.iter().map(|c| if *c { 'a' } else { 'b' }).collect();
-        println!("{}: {}", i, message);
-    }
-}
+// fn debug_print<'a, I>(messages: I)
+// where
+//     I: Iterator<Item = &'a Vec<bool>>,
+// {
+//     for (i, message) in messages.into_iter().enumerate() {
+//         let message: String = message.iter().map(|c| if *c { 'a' } else { 'b' }).collect();
+//         println!("{}: {}", i, message);
+//     }
+// }
