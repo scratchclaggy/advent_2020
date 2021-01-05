@@ -1,4 +1,4 @@
-use crate::tile::{Tile, TilePrimitive, TILE_HEIGHT, TILE_WIDTH};
+use crate::tile::{Tile, TileInsides, TILE_HEIGHT, TILE_WIDTH};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Transform {
@@ -18,16 +18,16 @@ pub enum Transform {
     6: West
     7: West inv
 */
-pub fn flip_horizontal(tile_primitive: &TilePrimitive) -> TilePrimitive {
-    let mut out = [false; TILE_HEIGHT * TILE_WIDTH];
+fn flip_horizontal_insides(tile_primitive: &TileInsides) -> TileInsides {
+    let mut out = Box::new([false; (TILE_HEIGHT - 2) * (TILE_WIDTH - 2)]);
     tile_primitive
-        .chunks_exact(TILE_WIDTH)
-        .zip(out.chunks_exact_mut(TILE_WIDTH).rev())
+        .chunks_exact(TILE_WIDTH - 2)
+        .zip(out.chunks_exact_mut(TILE_WIDTH - 2).rev())
         .for_each(|(t, o)| o.copy_from_slice(t));
     out
 }
 
-fn flip_sides_horizontal(old: &Tile) -> Tile {
+pub fn flip_horizontal(old: &Tile) -> Tile {
     Tile {
         sides: [
             old.sides[4], // South -> North
@@ -39,7 +39,7 @@ fn flip_sides_horizontal(old: &Tile) -> Tile {
             old.sides[7], // West inv -> West
             old.sides[6], // West -> West inv
         ],
-        insides: old.insides,
+        insides: flip_horizontal_insides(&old.insides),
         matching_tiles: [
             old.matching_tiles[4], // South -> North
             old.matching_tiles[5], // South inv -> North inv
@@ -53,16 +53,16 @@ fn flip_sides_horizontal(old: &Tile) -> Tile {
     }
 }
 
-pub fn flip_vertical(tile_primitive: &TilePrimitive) -> TilePrimitive {
-    let mut out = [false; TILE_HEIGHT * TILE_WIDTH];
+fn flip_vertical_insides(tile_primitive: &TileInsides) -> TileInsides {
+    let mut out = Box::new([false; (TILE_HEIGHT - 2) * (TILE_WIDTH - 2)]);
     tile_primitive
-        .chunks_exact(TILE_WIDTH)
-        .zip(out.chunks_exact_mut(TILE_WIDTH))
+        .chunks_exact(TILE_WIDTH - 2)
+        .zip(out.chunks_exact_mut(TILE_WIDTH - 2))
         .for_each(|(t, o)| t.iter().zip(o.iter_mut().rev()).for_each(|(t, o)| *o = *t));
     out
 }
 
-fn flip_sides_vertical(old: &Tile) -> Tile {
+pub fn flip_vertical(old: &Tile) -> Tile {
     Tile {
         sides: [
             old.sides[1], // North -> North inv
@@ -74,7 +74,7 @@ fn flip_sides_vertical(old: &Tile) -> Tile {
             old.sides[2], // East -> West
             old.sides[3], // East inv -> West inv
         ],
-        insides: old.insides,
+        insides: flip_vertical_insides(&old.insides),
         matching_tiles: [
             old.matching_tiles[1], // North -> North inv
             old.matching_tiles[0], // North inv -> North
@@ -88,20 +88,20 @@ fn flip_sides_vertical(old: &Tile) -> Tile {
     }
 }
 
-fn rotate_internals(tile: &TilePrimitive) -> TilePrimitive {
-    let mut out = [false; TILE_HEIGHT * TILE_WIDTH];
-    out.chunks_exact_mut(TILE_WIDTH)
+fn rotate_internals(tile: &TileInsides) -> TileInsides {
+    let mut out = Box::new([false; (TILE_HEIGHT - 2) * (TILE_WIDTH - 2)]);
+    out.chunks_exact_mut(TILE_WIDTH - 2)
         .enumerate()
         .for_each(|(x, row)| {
             row.iter_mut()
                 .rev()
                 .enumerate()
-                .for_each(|(y, out)| *out = tile[(y * TILE_WIDTH) + x])
+                .for_each(|(y, out)| *out = tile[(y * (TILE_WIDTH - 2)) + x])
         });
     out
 }
 
-fn rotate_sides(old: Tile) -> Tile {
+pub fn rotate_cw(old: &Tile) -> Tile {
     Tile {
         sides: [
             old.sides[7], // West inv -> North
@@ -113,7 +113,7 @@ fn rotate_sides(old: Tile) -> Tile {
             old.sides[4], // North -> East
             old.sides[5], // North inv -> East inv
         ],
-        insides: old.insides,
+        insides: rotate_internals(&old.insides),
         matching_tiles: [
             old.matching_tiles[7], // West inv -> North
             old.matching_tiles[6], // West -> North inv
@@ -127,10 +127,31 @@ fn rotate_sides(old: Tile) -> Tile {
     }
 }
 
-pub fn rotate_tile(tile: &TilePrimitive, steps: usize) -> TilePrimitive {
-    let mut out = tile.clone();
-    for _ in 0..steps {
-        out = rotate_internals(&out);
-    }
+pub fn rotate_image(image: &Vec<Vec<bool>>) -> Vec<Vec<bool>> {
+    let mut out = image.clone();
+    out.iter_mut().enumerate().for_each(|(x, row)| {
+        row.iter_mut()
+            .rev()
+            .enumerate()
+            .for_each(|(y, out)| *out = image[y][x])
+    });
+    out
+}
+
+pub fn flip_image_horizontal(image: &Vec<Vec<bool>>) -> Vec<Vec<bool>> {
+    let mut out = image.clone();
+    out.iter_mut()
+        .zip(image.iter().rev())
+        .for_each(|(dst, src)| dst.copy_from_slice(src));
+    out
+}
+
+pub fn flip_image_vertical(image: &Vec<Vec<bool>>) -> Vec<Vec<bool>> {
+    let mut out = image.clone();
+    out.iter_mut().zip(image.iter()).for_each(|(dst, src)| {
+        dst.iter_mut()
+            .zip(src.iter().rev())
+            .for_each(|(dst, src)| *dst = *src)
+    });
     out
 }
