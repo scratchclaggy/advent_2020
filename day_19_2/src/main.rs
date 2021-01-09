@@ -2,10 +2,11 @@ use std::collections::HashMap;
 use std::fs;
 
 const FILENAME: &str = "input.txt";
+const WORDSIZE: usize = 8;
 
 fn main() {
     let mut ruleset: HashMap<usize, RuleMessage> = HashMap::new();
-    let mut unverified_messages: Vec<(Vec<bool>, usize)> = vec![];
+    let mut unverified_messages: Vec<Vec<Vec<bool>>> = vec![];
 
     let input_file = fs::read_to_string(FILENAME).expect("File I/O error");
     let mut input_file = input_file.lines();
@@ -43,41 +44,31 @@ fn main() {
 
     // Get unverified messages
     while let Some(line) = input_file.next() {
-        let mut current_message: Vec<bool> = vec![];
-        for c in line.chars() {
+        let mut msg: Vec<bool> = vec![];
+        let mut line = line.chars();
+        while let Some(c) = line.next() {
             if c == 'a' {
-                current_message.push(true);
+                msg.push(true);
             } else {
-                current_message.push(false);
+                msg.push(false);
             }
         }
-        let current_len = current_message.len();
-        unverified_messages.push((current_message, current_len));
+        let msg = msg.chunks(WORDSIZE).map(|chunk| chunk.to_vec()).collect();
+
+        unverified_messages.push(msg);
     }
 
-    println!(
-        "Answer: {}",
-        unverified_messages
+    let mut ans = 0;
+    for msg in unverified_messages.iter_mut() {
+        if msg
             .iter_mut()
-            // .filter(|msg| msg.1 == 24)
-            .filter_map(|mut msg| {
-                for c in msg.0.iter() {
-                    if *c {
-                        print!("a");
-                    } else {
-                        print!("b");
-                    }
-                }
-                if check_message(&mut msg, 0, &ruleset, 15) {
-                    println!(": okay");
-                    Some(true)
-                } else {
-                    println!(": no good");
-                    None
-                }
-            })
-            .count()
-    );
+            .all(|substring| check_message(substring, 0, &ruleset))
+        {
+            ans += 1;
+        }
+    }
+
+    println!("Ans: {}", ans);
 }
 
 enum RuleMessage {
@@ -85,15 +76,8 @@ enum RuleMessage {
     Val(bool),
 }
 
-fn check_message(
-    msg: &mut (Vec<bool>, usize),
-    rule: usize,
-    ruleset: &HashMap<usize, RuleMessage>,
-    mut search_depth: usize,
-) -> bool {
-    if search_depth > msg.1 {
-        return false;
-    } else if msg.0.is_empty() {
+fn check_message(msg: &mut Vec<bool>, rule: usize, ruleset: &HashMap<usize, RuleMessage>) -> bool {
+    if msg.is_empty() {
         return true;
     }
 
@@ -104,7 +88,7 @@ fn check_message(
             if let Some(ref_list) = list_of_rule_lists.next() {
                 let mut msg_copy = msg.clone();
                 for rule_ref in ref_list {
-                    okay = check_message(&mut msg_copy, *rule_ref, &ruleset, search_depth);
+                    okay = check_message(&mut msg_copy, *rule_ref, &ruleset);
                     if !okay {
                         break;
                     }
@@ -116,13 +100,8 @@ fn check_message(
             }
             if let Some(ref_list) = list_of_rule_lists.next() {
                 let mut msg_copy = msg.clone();
-                if rule == 8 {
-                    search_depth += 5;
-                } else if rule == 11 {
-                    search_depth += 10;
-                }
                 for rule_ref in ref_list {
-                    okay = check_message(&mut msg_copy, *rule_ref, &ruleset, search_depth);
+                    okay = check_message(&mut msg_copy, *rule_ref, &ruleset);
                     if !okay {
                         break;
                     }
@@ -134,8 +113,8 @@ fn check_message(
             }
         }
         RuleMessage::Val(actual_value) => {
-            if msg.0[0] == *actual_value {
-                msg.0.remove(0);
+            if msg[0] == *actual_value {
+                msg.remove(0);
                 return true;
             } else {
                 return false;
