@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use std::fs;
 
 const FILENAME: &str = "input.txt";
+const WORDSIZE: usize = 8;
 
 fn main() {
     let mut rule_book: HashMap<usize, Rule> = HashMap::new();
